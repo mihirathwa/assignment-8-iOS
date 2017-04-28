@@ -34,6 +34,9 @@
                                         </label>
                                     </subviews>
                                 </tableViewCellContentView>
+                                <connections>
+                                    <segue destination="gEj-P6-fbG" kind="show" identifier="goToPlaceView" id="xvc-fO-yn8"/>
+                                </connections>
                             </tableViewCell>
                         </prototypes>
                         <connections>
@@ -247,4 +250,7 @@
             <point key="canvasLocation" x="-226.40000000000001" y="127.28635682158921"/>
         </scene>
     </scenes>
+    <inferredMetricsTieBreakers>
+        <segue reference="xvc-fO-yn8"/>
+    </inferredMetricsTieBreakers>
 </document>
