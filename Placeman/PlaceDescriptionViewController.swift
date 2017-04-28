@@ -1,3 +1,18 @@
+// Copyright 2017 Mihir Rathwa,
+//
+// This license provides the instructor Dr. Tim Lindquist and Arizona
+// State University the right to build and evaluate the package for the
+// purpose of determining grade and program assessment.
+//
+// Purpose: This file contains the View Controller class as described
+// in Assignment 8, it displays the descriptions of Places with ability
+// edit fields and remove places, all data is persisted to App's Core Data
+//
+// Ser423 Mobile Applications
+// see http://pooh.poly.asu.edu/Mobile
+// @author Mihir Rathwa Mihir.Rathwa@asu.edu
+// Software Engineering, CIDSE, ASU Poly
+// @version April 27, 2017
 //
 //  PlaceDescriptionViewController.swift
 //  Placeman
@@ -18,10 +33,10 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
     var firstLongitude = 0.0
     
     @IBOutlet weak var UIName: UITextField!
-    @IBOutlet weak var UIDescription: UITextView!
+    @IBOutlet weak var UIDescription: UITextField!
     @IBOutlet weak var UICategory: UITextField!
     @IBOutlet weak var UIAddressTitle: UITextField!
-    @IBOutlet weak var UIAddressStreet: UITextView!
+    @IBOutlet weak var UIAddressStreet: UITextField!
     @IBOutlet weak var UIElevation: UITextField!
     @IBOutlet weak var UILatitude: UITextField!
     @IBOutlet weak var UILongitude: UITextField!
@@ -37,13 +52,30 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        let tappedAnyWhere: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(PlaceDescriptionViewController.dismissOpenKeyboard))
+        view.addGestureRecognizer(tappedAnyWhere)
+        
         appDelegate = (UIApplication.shared.delegate as! AppDelegate)
         context = appDelegate!.persistentContainer.viewContext
         
         if _segueIdentity == "goToPlaceView" {
             setUIWithCoreData()
             getAllPlaces()
+            
+            UIDistance.isHidden = false
+            UIBearing.isHidden = false
+            UIPlacePicker.isHidden = false
+        } else if _segueIdentity == "addButtonSegue" {
+            clearUIData()
+            
+            UIDistance.isHidden = true
+            UIBearing.isHidden = true
+            UIPlacePicker.isHidden = true
         }
+    }
+    
+    func dismissOpenKeyboard(){
+        self.view.endEditing(true)
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
@@ -92,38 +124,50 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
     }
     
     @IBAction func clickedSaveButton(_ sender: UIButton) {
-        let newPlaceName: String = UIName.text!
-        let newPlaceDescription: String = UIDescription.text!
-        let newPlaceCategory: String = UICategory.text!
-        let newPlaceAddressTitle: String = UIAddressTitle.text!
-        let newPlaceAddressStreet: String = UIAddressStreet.text!
-        let newPlaceElevation: Double = Double(UIElevation.text!)!
-        let newPlaceLatitude: Double = Double(UILatitude.text!)!
-        let newPlaceLongitude: Double = Double(UILongitude.text!)!
         
-        
-        let newPlace = NSEntityDescription.insertNewObject(forEntityName: "PlaceDescription", into: context!)
-        
-        newPlace.setValue(newPlaceName, forKey: "name")
-        newPlace.setValue(newPlaceDescription, forKey: "pdescription")
-        newPlace.setValue(newPlaceCategory, forKey: "category")
-        newPlace.setValue(newPlaceAddressTitle, forKey: "address_title")
-        newPlace.setValue(newPlaceAddressStreet, forKey: "address_street")
-        newPlace.setValue(newPlaceElevation, forKey: "elevation")
-        newPlace.setValue(newPlaceLatitude, forKey: "latitude")
-        newPlace.setValue(newPlaceLongitude, forKey: "longitude")
-        
-        do {
-            try context?.save()
-            print ("Saved Place to Core Data")
-            performSegue(withIdentifier: "goToTableView", sender: self)
-        } catch {
-            print("Error while saving Place")
+        if validateTextFields() {
+            
+            if(_segueIdentity == "goToPlaceView") {
+                deletePlace()
+            }
+            
+            let newPlaceName: String = UIName.text!
+            let newPlaceDescription: String = UIDescription.text!
+            let newPlaceCategory: String = UICategory.text!
+            let newPlaceAddressTitle: String = UIAddressTitle.text!
+            let newPlaceAddressStreet: String = UIAddressStreet.text!
+            let newPlaceElevation: Double = Double(UIElevation.text!)!
+            let newPlaceLatitude: Double = Double(UILatitude.text!)!
+            let newPlaceLongitude: Double = Double(UILongitude.text!)!
+            
+            let newPlace = NSEntityDescription.insertNewObject(forEntityName: "PlaceDescription", into: context!)
+            
+            newPlace.setValue(newPlaceName, forKey: "name")
+            newPlace.setValue(newPlaceDescription, forKey: "pdescription")
+            newPlace.setValue(newPlaceCategory, forKey: "category")
+            newPlace.setValue(newPlaceAddressTitle, forKey: "address_title")
+            newPlace.setValue(newPlaceAddressStreet, forKey: "address_street")
+            newPlace.setValue(newPlaceElevation, forKey: "elevation")
+            newPlace.setValue(newPlaceLatitude, forKey: "latitude")
+            newPlace.setValue(newPlaceLongitude, forKey: "longitude")
+            
+            do {
+                try context?.save()
+                print ("Saved Place to Core Data")
+                performSegue(withIdentifier: "goToTableView", sender: self)
+            } catch {
+                print("Error while saving Place")
+            }
         }
+        
     }
     
     @IBAction func clickedDeleteButton(_ sender: UIButton) {
-        
+        deletePlace()
+        performSegue(withIdentifier: "goToTableView", sender: self)
+    }
+    
+    func deletePlace() {
         let request = NSFetchRequest<NSFetchRequestResult>(entityName: "PlaceDescription")
         request.returnsObjectsAsFaults = false
         
@@ -143,7 +187,6 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
             
             do {
                 try context?.save()
-                performSegue(withIdentifier: "goToTableView", sender: self)
             } catch {
                 print("Error in deleting Core Data")
             }
@@ -174,13 +217,13 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
                             UIAddressTitle.text = result.value(forKey: "address_title") as? String
                             UIAddressStreet.text = result.value(forKey: "address_street") as? String
                             
-                            let firstElevation = result.value(forKey: "elevation") as? Double
+                            let firstElevation: Double = (result.value(forKey: "elevation") as? Double)!
                             firstLatitude = (result.value(forKey: "latitude") as? Double)!
                             firstLongitude = (result.value(forKey: "longitude") as? Double)!
                             
-                            UIElevation.text = "\(firstElevation)"
-                            UILatitude.text = "\(firstLatitude)"
-                            UILongitude.text = "\(firstLongitude)"
+                            UIElevation.text = String(firstElevation)
+                            UILatitude.text = String(firstLatitude)
+                            UILongitude.text = String(firstLongitude)
                         }
                     }
                 }
@@ -255,6 +298,114 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
         bearing = aTan2Value * ( 180 / M_PI )
         
         return bearing
+    }
+    
+    func validateTextFields() -> Bool{
+        let redBorderColor: UIColor = UIColor.red
+        let greenBorderColor: UIColor = UIColor.green
+        
+        var isValidated = true
+        
+        if UIName.text == ""{
+            UIName.layer.borderWidth = 1.5
+            UIName.layer.borderColor = redBorderColor.cgColor
+            UIName.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UIName.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UIDescription.text == ""{
+            UIDescription.layer.borderWidth = 1.5
+            UIDescription.layer.borderColor = redBorderColor.cgColor
+            UIDescription.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UIDescription.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UICategory.text == ""{
+            UICategory.layer.borderWidth = 1.5
+            UICategory.layer.borderColor = redBorderColor.cgColor
+            UICategory.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UICategory.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UIAddressTitle.text == ""{
+            UIAddressTitle.layer.borderWidth = 1.5
+            UIAddressTitle.layer.borderColor = redBorderColor.cgColor
+            UIAddressTitle.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UIAddressTitle.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UIAddressStreet.text == ""{
+            UIAddressStreet.layer.borderWidth = 1.5
+            UIAddressStreet.layer.borderColor = redBorderColor.cgColor
+            UIAddressStreet.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UIAddressStreet.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UIElevation.text == ""{
+            UIElevation.layer.borderWidth = 1.5
+            UIElevation.layer.borderColor = redBorderColor.cgColor
+            UIElevation.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UIElevation.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UILatitude.text == ""{
+            UILatitude.layer.borderWidth = 1.5
+            UILatitude.layer.borderColor = redBorderColor.cgColor
+            UILatitude.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UILatitude.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        if UILongitude.text == ""{
+            UILongitude.layer.borderWidth = 1.5
+            UILongitude.layer.borderColor = redBorderColor.cgColor
+            UILongitude.placeholder = "required"
+            isValidated = false
+        }
+        else {
+            UILongitude.layer.borderColor = greenBorderColor.cgColor
+            isValidated = true
+        }
+        
+        return isValidated
+    }
+    
+    func clearUIData() {
+        UIName.text = ""
+        UIDescription.text = ""
+        UICategory.text = ""
+        UIAddressTitle.text = ""
+        UIAddressStreet.text = ""
+        UIElevation.text = ""
+        UILatitude.text = ""
+        UILongitude.text = ""
     }
     
 
