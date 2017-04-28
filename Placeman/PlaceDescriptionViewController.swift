@@ -13,6 +13,10 @@ var selectedPlace = ""
 
 class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UIPickerViewDataSource {
     
+    var places = [String]()
+    var firstLatitude = 0.0
+    var firstLongitude = 0.0
+    
     @IBOutlet weak var UIName: UITextField!
     @IBOutlet weak var UIDescription: UITextView!
     @IBOutlet weak var UICategory: UITextField!
@@ -23,6 +27,7 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
     @IBOutlet weak var UILongitude: UITextField!
 
     @IBOutlet weak var UIDistance: UILabel!
+    @IBOutlet weak var UIBearing: UILabel!
     
     @IBOutlet weak var UIPlacePicker: UIPickerView!
     
@@ -37,6 +42,52 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
         
         if _segueIdentity == "goToPlaceView" {
             setUIWithCoreData()
+            getAllPlaces()
+        }
+    }
+    
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return places.count
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return places[row]
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        var secondLatitude: Double = 0.0
+        var secondLongitude: Double = 0.0
+        
+        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "PlaceDescription")
+        request.returnsObjectsAsFaults = false
+        
+        do {
+            let results = try context?.fetch(request)
+            
+            if (results?.count)! > 0 {
+                for result in results as! [NSManagedObject] {
+                    if let name = result.value(forKey: "name") as? String {
+                        
+                        if name == places[row] {
+                            secondLatitude = (result.value(forKey: "latitude") as? Double)!
+                            secondLongitude = (result.value(forKey: "longitude") as? Double)!
+                        }
+                        
+                    }
+                }
+            }
+            
+            let greatCircle = calculateGreatCircle(firstLatitude: firstLatitude, firstLongitude: firstLongitude, secondLatitude: secondLatitude, secondLongitude: secondLongitude)
+            let initialBearing = calculateInitialBearing(firstLatitude: firstLatitude, firstLongitude: firstLongitude, secondLatitude: secondLatitude, secondLongitude: secondLongitude)
+            
+            UIDistance.text = "Distance: " + String(greatCircle)
+            UIBearing.text = "Initial Bearing: " + String(initialBearing)
+        } catch {
+            print("Unable to get all Places")
         }
     }
     
@@ -124,8 +175,8 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
                             UIAddressStreet.text = result.value(forKey: "address_street") as? String
                             
                             let firstElevation = result.value(forKey: "elevation") as? Double
-                            let firstLatitude = result.value(forKey: "latitude") as? Double
-                            let firstLongitude = result.value(forKey: "longitude") as? Double
+                            firstLatitude = (result.value(forKey: "latitude") as? Double)!
+                            firstLongitude = (result.value(forKey: "longitude") as? Double)!
                             
                             UIElevation.text = "\(firstElevation)"
                             UILatitude.text = "\(firstLatitude)"
@@ -136,6 +187,25 @@ class PlaceDescriptionViewController: UIViewController, UIPickerViewDelegate, UI
             }
         } catch {
             print("Error getting Place Description Details")
+        }
+    }
+    
+    func getAllPlaces() {
+        let request = NSFetchRequest<NSFetchRequestResult>(entityName: "PlaceDescription")
+        request.returnsObjectsAsFaults = false
+        
+        do {
+            let results = try context?.fetch(request)
+            
+            if (results?.count)! > 0 {
+                for result in results as! [NSManagedObject] {
+                    if let name = result.value(forKey: "name") as? String {
+                        places.append(name)
+                    }
+                }
+            }
+        } catch {
+            print("Unable to get all Places")
         }
     }
     
